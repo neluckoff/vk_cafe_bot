@@ -10,7 +10,8 @@ full_screen_menu = (
 
 just_menu = (
     Keyboard(one_time=False, inline=False)
-        .add(Text('Меню'), color=KeyboardButtonColor.POSITIVE)
+        .add(Text('Меню'), color=KeyboardButtonColor.PRIMARY)
+        .add(Text('Указать свой адрес'), color=KeyboardButtonColor.POSITIVE)
 ).get_json()
 
 more_info = (

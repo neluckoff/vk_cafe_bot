@@ -2,7 +2,7 @@ from vkbottle.bot import Blueprint, Message
 from vkbottle import BaseStateGroup, CtxStorage
 from data.keyboards import full_screen_menu, just_menu, more_info
 from data.config import admin_list
-from misc.order import Order
+from misc.order import Order, Address
 
 bot = Blueprint("Only users chat command")
 ctx = CtxStorage()
@@ -11,8 +11,8 @@ ctx = CtxStorage()
 @bot.on.private_message(text=['Начать', 'Ку', 'Привет' '/start'])
 async def hello(message: Message):
     users_info = await bot.api.users.get(message.from_id)
-    await message.answer("Здравствуйте, {}".format(users_info[0].first_name) +
-                         "!\nДобро пожаловать в наше кафе! Нажмите \"Меню\" чтобы продолжить.", keyboard=just_menu)
+    await message.answer("Здравствуйте, {}".format(users_info[0].first_name) + "!" +
+                         "\nЗаполните Ваш адрес для будующих заказов или же нажмите \"Меню\" чтобы продолжить.", keyboard=just_menu)
 
 
 @bot.on.message(text=['Меню', '/menu', '👈🏻 Назад'])
@@ -37,7 +37,7 @@ async def answer(message: Message):
                                         f'vk.com/gim132641953?sel={user[0].id}', random_id=0)
 
 
-@bot.on.private_message(text='Адрес')
+@bot.on.private_message(text='Указать свой адрес')
 async def City(message: Message):
     await bot.state_dispenser.set(message.peer_id, Order.CITY)
     return "Введите Ваш город"
@@ -83,4 +83,6 @@ async def End(message: Message):
     ctx.set('floor', message.text)
     await message.answer(f'Ваш адрес: ' + ctx.get('city') + ', ' + ctx.get('street') + ', ' + ctx.get('home') + ', ' +
                          ctx.get('flat') + ', ' + ctx.get('doorphone') + ', ' + ctx.get('floor'))
+    address: Address = Address(ctx.get('city'), ctx.get('street'), ctx.get('home'), ctx.get('flat'), ctx.get('doorphone'), ctx.get('floor'))
+    print(address)
     return "Данные сохранены, если Вы допустили ошибку, перезапишите свой адрес еще раз."
