@@ -1,0 +1,3 @@
+vkbottle==4.3.0
+vkbottle-types==5.131.146.2.post1
+environs==9.5.0
