@@ -1,7 +1,7 @@
 from vkbottle.bot import Blueprint, Message
 from vkbottle import BaseStateGroup, CtxStorage
 from data.keyboards import full_screen_menu, just_menu, more_info
-from data.config import admin_list
+from commands.admins.admin_commands import online_admins
 from misc.order import Order, Address
 
 bot = Blueprint("Only users chat command")
@@ -28,13 +28,16 @@ async def hi_handler(message: Message):
 @bot.on.private_message(text=['Связаться', 'Вопрос', 'Помощь'])
 async def answer(message: Message):
     user = await bot.api.users.get(message.from_id)
-    print(user[0].id)
-    await message.answer("Хорошо, сейчас я вызову менеджера, пока можете сформулировать свой вопрос.")
-    await bot.api.messages.send(peer_ids=admin_list,
-                                message=f'Пользователь [vk.com/id{user[0].id}|'
-                                        f'{user[0].first_name} {user[0].last_name}]'
-                                        f' хочет связаться с менеджером!\nОтветить: '
-                                        f'vk.com/gim132641953?sel={user[0].id}', random_id=0)
+    if not online_admins:
+        await message.answer('Ни одного менеджера нет в сети, возможно сегодня не рабочий день.')
+    else:
+        await message.answer("Хорошо, сейчас я вызову менеджера, пока можете сформулировать свой вопрос.")
+        # TODO: поправить ссылку для сообщества
+        await bot.api.messages.send(peer_ids=online_admins,
+                                    message=f'Пользователь [vk.com/id{user[0].id}|'
+                                            f'{user[0].first_name} {user[0].last_name}]'
+                                            f' хочет связаться с менеджером!\nОтветить: '
+                                            f'vk.com/gim132641953?sel={user[0].id}', random_id=0)
 
 
 @bot.on.private_message(text='Указать свой адрес')
