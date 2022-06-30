@@ -11,6 +11,7 @@ if __name__ == "__main__":
     for bp in load_blueprints_from_package("commands"):
         bp.load(bot)
 
+    # TODO: разобраться с портами
     try:
         connection = pymysql.connect(
             host=host,
