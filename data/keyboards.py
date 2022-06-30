@@ -17,7 +17,7 @@ just_menu = (
 more_info = (
     Keyboard(one_time=False, inline=False)
         .add(Text("Наш адрес"), color=KeyboardButtonColor.PRIMARY)
-        .add(Text("Товары"), color=KeyboardButtonColor.PRIMARY)
+        .add(Text("Наше меню"), color=KeyboardButtonColor.PRIMARY)
         .row()
         .add(Text("Отзывы"), color=KeyboardButtonColor.PRIMARY)
         .add(Text("Скидки"), color=KeyboardButtonColor.PRIMARY)

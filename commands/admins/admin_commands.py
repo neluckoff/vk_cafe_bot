@@ -1,5 +1,4 @@
 from vkbottle.bot import Blueprint, Message
-import sqlite3
 from data.config import admin_list
 
 bot = Blueprint("Admin")
