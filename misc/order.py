@@ -1,4 +1,4 @@
-from vkbottle import CtxStorage, BaseStateGroup
+from vkbottle import BaseStateGroup
 
 
 class Order(BaseStateGroup):
@@ -8,7 +8,8 @@ class Order(BaseStateGroup):
     FLAT = 4
     DOORPHONE = 5
     FLOOR = 6
-    END = 7
+    PHONE = 7
+    END = 8
 
 
 class OrderInfo:

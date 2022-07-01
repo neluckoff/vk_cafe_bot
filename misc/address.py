@@ -9,7 +9,7 @@ class Address:
         self.floor = floor
 
     def to_string(self):
-        string = 'Город: ' + self.city + '\nУлица: ' + self.street + \
-                 '\nДом: ' + self.home + '\nКвартира: ' + self.flat + \
-                 '\nЭтаж ' + self.floor + '\nДомофон: ' + self.doorphone
+        string = 'Город ' + self.city + ', ' + self.street + \
+                 ' ' + self.home + ', кв ' + self.flat + \
+                 ', этаж ' + self.floor + ', домофон ' + self.doorphone
         return string

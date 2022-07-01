@@ -16,6 +16,6 @@ admin_list = [146653997]
 """
 
 host = "localhost"
-user = "admin"
-password = "1234"
-db_name = "users"
+user = "root"
+password = "Dmitry9260304"
+db_name = "cafe"
