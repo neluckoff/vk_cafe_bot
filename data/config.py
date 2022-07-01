@@ -16,6 +16,6 @@ admin_list = [146653997]
 """
 
 host = "localhost"
-user = "root"
-password = "Dmitry9260304"
+user = env.str("db_user")
+password = env.str("db_password")
 db_name = "cafe"
