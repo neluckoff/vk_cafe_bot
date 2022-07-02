@@ -1,16 +1,3 @@
-from vkbottle import BaseStateGroup
-
-
-class Order(BaseStateGroup):
-    CITY = 1
-    STREET = 2
-    HOME = 3
-    FLAT = 4
-    DOORPHONE = 5
-    FLOOR = 6
-    PHONE = 7
-    END = 8
-
 
 class OrderInfo:
     def __init__(self, user_id, order_id, date, order_list, status):
@@ -25,4 +12,3 @@ class OrderInfo:
 
     def status_received(self):
         self.status = True
-

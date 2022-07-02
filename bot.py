@@ -40,11 +40,14 @@ if __name__ == "__main__":
         connection.commit()
 
         cursor.execute("""CREATE TABLE IF NOT EXISTS orders(
-                    user_id int AUTO_INCREMENT,
-                    order_id int,
+                    order_id int AUTO_INCREMENT,
+                    user_id int,
+                    name varchar(80),
+                    address varchar(500),
+                    phone varchar(32),
                     date varchar(32),
                     order_list varchar(1000),
-                    PRIMARY KEY(user_id)
+                    PRIMARY KEY(order_id)
                        )""")
         connection.commit()
 

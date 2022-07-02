@@ -1,12 +1,13 @@
 from vkbottle.bot import Blueprint, Message
 from vkbottle import CtxStorage
 from data.keyboards import full_screen_menu, just_menu, more_info, back_to_start, person_keyboard, \
-    input_phone, input_address
-from data.config import group_id
-from commands.admins.admin_commands import online_admins
-from misc.order import Order
+    input_phone, input_address, input_all, delivery_keyboard
+from data.config import group_id, hight_admin
+from misc.state_group import AddressState, Phone, Order
 from misc.address import Address
 from bot import mysql_connect
+from commands.admins.admin_commands import online_admins
+import datetime
 
 bot = Blueprint("Only users chat command")
 ctx = CtxStorage()
@@ -76,6 +77,19 @@ async def search_address(message: Message):
             await message.answer("Ваш адрес: " + address)
 
 
+@bot.on.message(text='Количество заказов')
+async def search_orders(message: Message):
+    connection = mysql_connect()
+    with connection.cursor() as cursor:
+        users_info = await bot.api.users.get(message.from_id)
+        cursor.execute(f"SELECT num_orders FROM users WHERE id = {users_info[0].id}")
+        orders = cursor.fetchone()[0]
+        if orders == 0:
+            await message.answer("Вы пока не сделали ни единого заказа у нас.")
+        else:
+            await message.answer("Количество Ваших заказов: " + orders)
+
+
 @bot.on.private_message(text=['Связаться', 'Вопрос', 'Помощь'])
 async def answer(message: Message):
     user = await bot.api.users.get(message.from_id)
@@ -91,72 +105,79 @@ async def answer(message: Message):
 
 
 @bot.on.private_message(text='Указать номер телефона')
-async def hi_handler(message: Message):
-    await bot.state_dispenser.set(message.peer_id, Order.PHONE)
+async def handler(message: Message):
+    await bot.state_dispenser.set(message.peer_id, Phone.NUMBER)
     return "Напишите мне свой номер телефона.\nПример: 89261231212"
 
 
-@bot.on.private_message(state=Order.PHONE)
-async def Phone(message: Message):
-    #TODO: regex красивый вывод номера телефона
+@bot.on.private_message(state=Phone.NUMBER)
+async def phone_funct(message: Message):
     ctx.set('phone', message.text)
     users_info = await bot.api.users.get(message.from_id)
-    if len(ctx.get('phone')) >= 11:
-        if str(ctx.get('phone')).isdigit():
-            await message.answer(f'Ваш номер телефона: ' + ctx.get('phone'))
-            connection = mysql_connect()
-            with connection.cursor() as cursor:
-                update_query = f"UPDATE `users` SET phone = '{ctx.get('phone')}' WHERE id = '{users_info[0].id}'"
-                cursor.execute(update_query)
-                connection.commit()
-            return "Номер телефона сохранен, если Вы допустили ошибку, введите команду еще раз."
+    if len(ctx.get('phone')) == 11 and str(ctx.get('phone')).isdigit():
+        phone = ctx.get('phone')
+        if phone[0] == '8':
+            new_phone = f'{phone[0]} ({phone[1]}{phone[2]}{phone[3]}) ' \
+                        f'{phone[4]}{phone[5]}{phone[6]}-{phone[7]}{phone[8]}-{phone[9]}{phone[10]}'
+        elif phone[0] == '7':
+            new_phone = f'8 ({phone[1]}{phone[2]}{phone[3]}) ' \
+                        f'{phone[4]}{phone[5]}{phone[6]}-{phone[7]}{phone[8]}-{phone[9]}{phone[10]}'
+        await message.answer(f'Ваш номер телефона: ' + new_phone)
+        connection = mysql_connect()
+        with connection.cursor() as cursor:
+            update_query = f"UPDATE `users` SET phone = '{new_phone}' WHERE id = '{users_info[0].id}'"
+            cursor.execute(update_query)
+            connection.commit()
+        await bot.state_dispenser.set(message.peer_id, Phone.END)
+        return "Номер телефона сохранен, если Вы допустили ошибку, введите команду еще раз."
     else:
+        await bot.state_dispenser.set(message.peer_id, Phone.END)
         return "Это не похоже на номер телефона, воспользуйтесь командой еще раз."
 
 
 @bot.on.private_message(text='Указать свой адрес')
-async def City(message: Message):
-    await bot.state_dispenser.set(message.peer_id, Order.CITY)
+async def city(message: Message):
+    await bot.state_dispenser.set(message.peer_id, AddressState.CITY)
     return "Напишите мне свой город."
 
 
-@bot.on.private_message(state=Order.CITY)
-async def Street(message: Message):
+@bot.on.private_message(state=AddressState.CITY)
+async def street(message: Message):
     ctx.set('city', message.text)
-    await bot.state_dispenser.set(message.peer_id, Order.STREET)
+    await bot.state_dispenser.set(message.peer_id, AddressState.STREET)
     return "Отлично, а теперь улицу."
 
 
-@bot.on.private_message(state=Order.STREET)
-async def Home(message: Message):
+@bot.on.private_message(state=AddressState.STREET)
+async def home(message: Message):
     ctx.set('street', message.text)
-    await bot.state_dispenser.set(message.peer_id, Order.HOME)
+    await bot.state_dispenser.set(message.peer_id, AddressState.HOME)
     return "Введите номер дома (включая корпус или строение)."
 
 
-@bot.on.private_message(state=Order.HOME)
-async def Flat(message: Message):
+@bot.on.private_message(state=AddressState.HOME)
+async def flat(message: Message):
     ctx.set('home', message.text)
-    await bot.state_dispenser.set(message.peer_id, Order.FLAT)
+    await bot.state_dispenser.set(message.peer_id, AddressState.FLAT)
     return "Теперь мне нужен номер квартиры."
 
 
-@bot.on.private_message(state=Order.FLAT)
-async def Doorphone(message: Message):
+@bot.on.private_message(state=AddressState.FLAT)
+async def doorphone(message: Message):
     ctx.set('flat', message.text)
-    await bot.state_dispenser.set(message.peer_id, Order.DOORPHONE)
+    await bot.state_dispenser.set(message.peer_id, AddressState.DOORPHONE)
     return "А сейчас укажите код домофона (если кода нет, просто введите квартиру)."
 
 
-@bot.on.private_message(state=Order.DOORPHONE)
-async def Floor(message: Message):
+@bot.on.private_message(state=AddressState.DOORPHONE)
+async def floor(message: Message):
     ctx.set('doorphone', message.text)
-    await bot.state_dispenser.set(message.peer_id, Order.FLOOR)
+    await bot.state_dispenser.set(message.peer_id, AddressState.FLOOR)
     return "Последний штрих, укажите свой этаж."
 
 
-@bot.on.private_message(state=Order.FLOOR)
-async def End(message: Message):
+@bot.on.private_message(state=AddressState.FLOOR)
+async def address_end(message: Message):
     users_info = await bot.api.users.get(message.from_id)
     ctx.set('floor', message.text)
     address: Address = Address(ctx.get('city'), ctx.get('street'), ctx.get('home'), ctx.get('flat'),
@@ -167,4 +188,110 @@ async def End(message: Message):
         update_query = f"UPDATE `users` SET address = '{address.to_string()}' WHERE id = '{users_info[0].id}'"
         cursor.execute(update_query)
         connection.commit()
+    await bot.state_dispenser.set(message.peer_id, AddressState.END)
     return "Данные сохранены, если Вы допустили ошибку, перезапишите свой адрес еще раз."
+
+
+@bot.on.message(text='Сделать заказ')
+async def make_order(message: Message):
+    connection = mysql_connect()
+    users_info = await bot.api.users.get(message.from_id)
+    with connection.cursor() as cursor:
+        cursor.execute(f"SELECT phone FROM users WHERE id = {users_info[0].id}")
+        phone = str(cursor.fetchone()[0])
+        if phone == 'empty':
+            await message.answer("Для заказа необходимо указать номер телефона.", keyboard=input_phone)
+            await bot.state_dispenser.set(message.peer_id, Order.END)
+        else:
+            await bot.state_dispenser.set(message.peer_id, Order.DELIVERY)
+            await message.answer("Как Вы собираетесь забирать свой заказ?", keyboard=delivery_keyboard)
+
+
+@bot.on.private_message(state=Order.DELIVERY)
+async def delivery_info(message: Message):
+    msg = message.text
+    connection = mysql_connect()
+    users_info = await bot.api.users.get(message.from_id)
+    if msg == "Доставка":
+        with connection.cursor() as cursor:
+            cursor.execute(f"SELECT address FROM users WHERE id = {users_info[0].id}")
+            address = str(cursor.fetchone()[0])
+            if address == 'empty':
+                await message.answer("Для заказа необходимо заполнить адрес доставки.", keyboard=input_address)
+                await bot.state_dispenser.set(message.peer_id, Order.END)
+            else:
+                await bot.state_dispenser.set(message.peer_id, Order.INFO_DEL)
+                return "Пожалуйста, напишите свой заказ в формате:\n\n1 пицца\n2 колы"
+    elif msg == "Самовывоз":
+        await bot.state_dispenser.set(message.peer_id, Order.INFO_SAM)
+        return "Пожалуйста, напишите свой заказ в формате:\n\n1 пицца\n2 колы"
+
+
+@bot.on.private_message(state=Order.INFO_DEL)
+async def order_info(message: Message):
+    order = message.text.replace(' \n', '|')
+    now_date = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
+    users_info = await bot.api.users.get(message.from_id)
+    connection = mysql_connect()
+    with connection.cursor() as cursor:
+        cursor.execute(f"SELECT address FROM users WHERE id = {users_info[0].id}")
+        address = str(cursor.fetchone()[0])
+        cursor.execute(f"SELECT phone FROM users WHERE id = {users_info[0].id}")
+        phone = str(cursor.fetchone()[0])
+        connection.commit()
+    with connection.cursor() as cursor:
+        cursor.execute(f"SELECT order_id FROM orders")
+        ids_orders = cursor.fetchall()
+        last_num = 0
+        for row in ids_orders:
+            last_num = row[0] + 1
+        name = users_info[0].first_name + ' ' + users_info[0].last_name
+        cursor.execute(f"INSERT INTO `orders` (order_id, user_id, name, address, phone, date, order_list) "
+                       f"VALUES ('{last_num}', '{users_info[0].id}', '{name}',"
+                       f"'{address}', '{phone}', '{now_date}', '{order}');")
+        connection.commit()
+        await bot.state_dispenser.set(message.peer_id, Order.END)
+    order_str = f"Поступил новый заказ!\n\n№: {last_num}\n{now_date}\nОт: {name}\n{address}\n" \
+                f"Тел: {phone}\n{'#' * 20}\n{message.text}\n{'#' * 20}\n\nПерейти к диалогу: " \
+                f"vk.com/gim{group_id}?sel={users_info[0].id}"
+    if not online_admins:
+        await bot.api.messages.send(peer_id=hight_admin, message=order_str, random_id=0)
+        await bot.api.messages.send(peer_id=hight_admin,
+                                    message='❗ Вам пришло это уведомление, потому что ни одного менеджера нет в сети.',
+                                    random_id=0)
+    else:
+        await bot.api.messages.send(peer_ids=online_admins, message=order_str, random_id=0)
+
+
+@bot.on.private_message(state=Order.INFO_SAM)
+async def order_info(message: Message):
+    order = message.text.replace(' \n', '|')
+    now_date = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
+    users_info = await bot.api.users.get(message.from_id)
+    connection = mysql_connect()
+    with connection.cursor() as cursor:
+        cursor.execute(f"SELECT phone FROM users WHERE id = {users_info[0].id}")
+        phone = str(cursor.fetchone()[0])
+        connection.commit()
+    with connection.cursor() as cursor:
+        last_num = 0
+        cursor.execute(f"SELECT order_id FROM orders")
+        ids_orders = cursor.fetchall()
+        name = users_info[0].first_name + ' ' + users_info[0].last_name
+        for row in ids_orders:
+            last_num = row[0] + 1
+        cursor.execute(f"INSERT INTO `orders` (order_id, user_id, name, address, phone, date, order_list) "
+                       f"VALUES ('{last_num}', '{users_info[0].id}', '{name}',"
+                       f"'Самовывоз', '{phone}', '{now_date}', '{order}');")
+        connection.commit()
+        await bot.state_dispenser.set(message.peer_id, Order.END)
+    order_str = f"Поступил новый заказ!\n\n№: {last_num}\n{now_date}\nОт: {name}\nСАМОВЫВОЗ\n" \
+                f"Тел: {phone}\n{'#' * 20}\n{message.text}\n{'#' * 20}\n\nПерейти к диалогу: " \
+                f"vk.com/gim{group_id}?sel={users_info[0].id}"
+    if not online_admins:
+        await bot.api.messages.send(peer_id=hight_admin, message=order_str, random_id=0)
+        await bot.api.messages.send(peer_id=hight_admin,
+                                    message='❗ Вам пришло это уведомление, потому что ни одного менеджера нет в сети.',
+                                    random_id=0)
+    else:
+        await bot.api.messages.send(peer_ids=online_admins, message=order_str, random_id=0)

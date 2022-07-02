@@ -50,3 +50,15 @@ input_address = (
     Keyboard(inline=True)
         .add(Text('Указать свой адрес'), color=KeyboardButtonColor.PRIMARY)
 ).get_json()
+
+input_all = (
+    Keyboard(inline=True)
+        .add(Text('Указать номер телефона'), color=KeyboardButtonColor.PRIMARY)
+        .add(Text('Указать свой адрес'), color=KeyboardButtonColor.PRIMARY)
+).get_json()
+
+delivery_keyboard = (
+    Keyboard(inline=True)
+        .add(Text('Доставка'), color=KeyboardButtonColor.POSITIVE)
+        .add(Text('Самовывоз'), color=KeyboardButtonColor.POSITIVE)
+).get_json()
