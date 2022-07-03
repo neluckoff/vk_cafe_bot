@@ -1,6 +1,6 @@
 from vkbottle.bot import Blueprint, Message
 from data.config import admin_list
-from bot import mysql_connect
+from bot import mysql_connect, group_id
 
 bot = Blueprint("Admin")
 online_admins = []
@@ -127,3 +127,36 @@ async def completed_order(message: Message, args=None):
                 return "Вы ввели не число."
         else:
             await message.answer('Для принятия заказа напишите: Отклонить НОМЕР')
+
+
+@bot.on.message(text=['Инфо', 'Информация', 'Инфо <args>', 'Инфомация <args>'])
+async def completed_order(message: Message, args=None):
+    users_info = await bot.api.users.get(message.from_id)
+    if users_info[0].id in admin_list:
+        if args is not None:
+            if str(args).isdigit():
+                connection = mysql_connect()
+                with connection.cursor() as cursor:
+                    cursor.execute(f"SELECT order_id FROM orders")
+                    ids_orders = cursor.fetchall()
+                    orders = []
+                    for row in ids_orders:
+                        orders.append(row[0])
+                        connection.commit()
+                if int(args) in orders:
+                    with connection.cursor() as cursor:
+                        cursor.execute(f"SELECT * FROM orders WHERE order_id = '{int(args)}'")
+                        order_info = cursor.fetchone()
+                        connection.commit()
+                    info = str(order_info[6]).replace("|", "\n")
+                    await message.answer(f'Информация о заказе №{order_info[0]}:\n\n'
+                                         f'{order_info[5]}\n'
+                                         f'От: {order_info[2]}\nАдрес: {order_info[3]}\n'
+                                         f'Тел: {order_info[4]}\n\n{"#" * 20}\n{info}\n{"#" * 20}\n\n'
+                                         f'Диалог: vk.com/gim{group_id}?sel={order_info[1]}')
+                else:
+                    return "Такого заказа не существует."
+            else:
+                return "Вы ввели не число!"
+        else:
+            return "Вы забыли указать номер заказа."
