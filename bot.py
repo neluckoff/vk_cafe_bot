@@ -31,10 +31,11 @@ if __name__ == "__main__":
         cursor.execute("""CREATE TABLE IF NOT EXISTS users(
                    id int AUTO_INCREMENT,
                    name varchar(32),
-                   surname varchar(32),
                    phone varchar(32),
                    address varchar(500),
                    num_orders int(15),
+                   status varchar(32),
+                   banned BOOLEAN,
                    PRIMARY KEY(id)
                )""")
         connection.commit()

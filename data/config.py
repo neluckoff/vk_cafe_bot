@@ -9,8 +9,7 @@ env.read_env()
 
 BOT_TOKEN = env.str("TOKEN")
 group_id = env.int("group_id")
-admin_list = [146653997]
-hight_admin = 146653997
+hight_admin = [146653997]
 
 """
 Модуль с информацией о базе данных

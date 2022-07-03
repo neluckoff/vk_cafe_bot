@@ -20,10 +20,18 @@ async def hello(message: Message):
     cursor = connection.cursor()
     cursor.execute(f"SELECT id FROM users WHERE id = {users_info[0].id}")
     if cursor.fetchone() is None:
-        cursor.execute(f"INSERT INTO `users` (id, name, surname, phone, address, num_orders) "
-                       f"VALUES ('{users_info[0].id}', '{users_info[0].first_name}', "
-                       f"'{users_info[0].last_name}', 'empty', 'empty', 0);")
-        connection.commit()
+        if users_info[0].id in hight_admin:
+            name = f'{users_info[0].first_name} {users_info[0].last_name}'
+            cursor.execute(f"INSERT INTO `users` (id, name, phone, address, num_orders, status, banned) "
+                           f"VALUES ('{users_info[0].id}', '{name}', "
+                           f"'empty', 'empty', 0, 'admin', 0);")
+            connection.commit()
+        else:
+            name = f'{users_info[0].first_name} {users_info[0].last_name}'
+            cursor.execute(f"INSERT INTO `users` (id, name, phone, address, num_orders, status, banned) "
+                           f"VALUES ('{users_info[0].id}', '{name}', "
+                           f"'empty', 'empty', 0, 'user', 0);")
+            connection.commit()
     await message.answer("Здравствуйте, {}".format(users_info[0].first_name) + "!" +
                          "\nЗаполните Ваш адрес для будующих заказов или же нажмите \"Меню\" чтобы продолжить.",
                          keyboard=just_menu)

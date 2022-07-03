@@ -1,13 +1,26 @@
 from vkbottle.bot import Blueprint, Message
-from data.config import admin_list
 from bot import mysql_connect, group_id
+from vkbottle import PhotoMessageUploader
 
 bot = Blueprint("Admin")
 online_admins = []
 
 
+def get_admins():
+    connection = mysql_connect()
+    list_admins = []
+    with connection.cursor() as cursor:
+        cursor.execute(f"SELECT id FROM users WHERE status = 'admin'")
+        admins = cursor.fetchall()
+        for row in admins:
+            list_admins.append(row[0])
+        connection.commit()
+    return list_admins
+
+
 @bot.on.message(text="Начать работу")
 async def hi_admin(message: Message):
+    admin_list = get_admins()
     users_info = await bot.api.users.get(message.from_id)
     if users_info[0].id in admin_list:
         if users_info[0].id in online_admins:
@@ -19,6 +32,7 @@ async def hi_admin(message: Message):
 
 @bot.on.message(text="Завершить работу")
 async def bye_admin(message: Message):
+    admin_list = get_admins()
     users_info = await bot.api.users.get(message.from_id)
     if users_info[0].id in admin_list:
         if users_info[0].id in online_admins:
@@ -30,6 +44,7 @@ async def bye_admin(message: Message):
 
 @bot.on.message(text="Заказы")
 async def orders_list(message: Message):
+    admin_list = get_admins()
     users_info = await bot.api.users.get(message.from_id)
     if users_info[0].id in admin_list:
         connection = mysql_connect()
@@ -56,6 +71,7 @@ async def orders_list(message: Message):
 
 @bot.on.message(text=['Принять', 'Принять <args>'])
 async def completed_order(message: Message, args=None):
+    admin_list = get_admins()
     users_info = await bot.api.users.get(message.from_id)
     if users_info[0].id in admin_list:
         if args is not None:
@@ -96,6 +112,7 @@ async def completed_order(message: Message, args=None):
 
 @bot.on.message(text=['Отклонить', 'Отклонить <args>'])
 async def completed_order(message: Message, args=None):
+    admin_list = get_admins()
     users_info = await bot.api.users.get(message.from_id)
     if users_info[0].id in admin_list:
         if args is not None:
@@ -131,6 +148,7 @@ async def completed_order(message: Message, args=None):
 
 @bot.on.message(text=['Инфо', 'Информация', 'Инфо <args>', 'Инфомация <args>'])
 async def completed_order(message: Message, args=None):
+    admin_list = get_admins()
     users_info = await bot.api.users.get(message.from_id)
     if users_info[0].id in admin_list:
         if args is not None:
@@ -160,3 +178,45 @@ async def completed_order(message: Message, args=None):
                 return "Вы ввели не число!"
         else:
             return "Вы забыли указать номер заказа."
+
+
+@bot.on.message(text=['Анкета', 'Клиент', 'Анкета <args>', 'Клиент <args>'])
+async def completed_order(message: Message, args=None):
+    admin_list = get_admins()
+    users_info = await bot.api.users.get(message.from_id)
+    if users_info[0].id in admin_list:
+        if args is not None:
+            connection = mysql_connect()
+            if str(args).isdigit():
+                with connection.cursor() as cursor:
+                    cursor.execute(f"SELECT * FROM users WHERE id = {int(args)}")
+                    user_db = cursor.fetchone()
+                    connection.commit()
+                if not user_db:
+                    await message.answer("Пользователь с таким ID не зарегистрирован.")
+                else:
+                    name = user_db[1]
+                    id_db = user_db[0]
+                    if user_db[2] == 'empty':
+                        phone = 'отсутствует'
+                    else:
+                        phone = user_db[2]
+                    if user_db[3] == 'empty':
+                        address = 'отсутствует'
+                    else:
+                        address = user_db[3]
+                    num_orders = user_db[4]
+                    if int(user_db[6]) == 0:
+                        banned = 'нет'
+                    else:
+                        banned = 'да'
+                    await message.answer(f'Информация о пользователе\n\nИмя: {name}\n'
+                                         f'Личный ID: {id_db}\nКол-во заказов: {num_orders}\n'
+                                         f'Тел: {phone}\nАдрес: {address}\nЗабанен: {banned}')
+            else:
+                photo_upd = PhotoMessageUploader(bot.api)
+                photo = await photo_upd.upload("drawable/help_search_id.png")
+                await message.answer(f'Пожалуйста, введите ID пользователя.\nЗайдите в переписку группы с пользователем'
+                                     f' и скопируйте ID, как это показано на фотографии.', attachment=photo)
+        else:
+            await message.answer("Вы не указали ID пользователя.\nМожете прописать: Анкета помощь")
