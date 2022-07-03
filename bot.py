@@ -47,6 +47,7 @@ if __name__ == "__main__":
                     phone varchar(32),
                     date varchar(32),
                     order_list varchar(1000),
+                    completed BOOLEAN, 
                     PRIMARY KEY(order_id)
                        )""")
         connection.commit()

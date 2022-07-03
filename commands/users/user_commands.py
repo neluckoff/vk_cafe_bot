@@ -87,7 +87,7 @@ async def search_orders(message: Message):
         if orders == 0:
             await message.answer("Вы пока не сделали ни единого заказа у нас.")
         else:
-            await message.answer("Количество Ваших заказов: " + orders)
+            await message.answer("Количество Ваших заказов: " + str(orders))
 
 
 @bot.on.private_message(text=['Связаться', 'Вопрос', 'Помощь'])
@@ -228,7 +228,7 @@ async def delivery_info(message: Message):
 
 
 @bot.on.private_message(state=Order.INFO_DEL)
-async def order_info(message: Message):
+async def order_info_del(message: Message):
     order = message.text.replace(' \n', '|')
     now_date = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
     users_info = await bot.api.users.get(message.from_id)
@@ -246,9 +246,9 @@ async def order_info(message: Message):
         for row in ids_orders:
             last_num = row[0] + 1
         name = users_info[0].first_name + ' ' + users_info[0].last_name
-        cursor.execute(f"INSERT INTO `orders` (order_id, user_id, name, address, phone, date, order_list) "
+        cursor.execute(f"INSERT INTO `orders` (order_id, user_id, name, address, phone, date, order_list, completed) "
                        f"VALUES ('{last_num}', '{users_info[0].id}', '{name}',"
-                       f"'{address}', '{phone}', '{now_date}', '{order}');")
+                       f"'{address}', '{phone}', '{now_date}', '{order}', '{0}');")
         connection.commit()
         await bot.state_dispenser.set(message.peer_id, Order.END)
     order_str = f"Поступил новый заказ!\n\n№: {last_num}\n{now_date}\nОт: {name}\n{address}\n" \
@@ -261,10 +261,12 @@ async def order_info(message: Message):
                                     random_id=0)
     else:
         await bot.api.messages.send(peer_ids=online_admins, message=order_str, random_id=0)
+    await message.answer(f"Ваш заказ был оформлен под №:{last_num}\nДата: {now_date}\nАдрес доставки: {address}\n"
+                         f"Тел: {phone}\n{'#' * 20}\n{message.text}\n{'#' * 20}")
 
 
 @bot.on.private_message(state=Order.INFO_SAM)
-async def order_info(message: Message):
+async def order_info_sam(message: Message):
     order = message.text.replace(' \n', '|')
     now_date = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
     users_info = await bot.api.users.get(message.from_id)
@@ -280,9 +282,9 @@ async def order_info(message: Message):
         name = users_info[0].first_name + ' ' + users_info[0].last_name
         for row in ids_orders:
             last_num = row[0] + 1
-        cursor.execute(f"INSERT INTO `orders` (order_id, user_id, name, address, phone, date, order_list) "
+        cursor.execute(f"INSERT INTO `orders` (order_id, user_id, name, address, phone, date, order_list, completed) "
                        f"VALUES ('{last_num}', '{users_info[0].id}', '{name}',"
-                       f"'Самовывоз', '{phone}', '{now_date}', '{order}');")
+                       f"'Самовывоз', '{phone}', '{now_date}', '{order}', '{0}');")
         connection.commit()
         await bot.state_dispenser.set(message.peer_id, Order.END)
     order_str = f"Поступил новый заказ!\n\n№: {last_num}\n{now_date}\nОт: {name}\nСАМОВЫВОЗ\n" \
@@ -295,3 +297,5 @@ async def order_info(message: Message):
                                     random_id=0)
     else:
         await bot.api.messages.send(peer_ids=online_admins, message=order_str, random_id=0)
+    await message.answer(f"Ваш заказ был оформлен под №:{last_num}\nДата: {now_date}\nТип доставки: Самовывоз\n"
+                         f"Тел: {phone}\n{'#' * 20}\n{message.text}\n{'#' * 20}")
