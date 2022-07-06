@@ -19,12 +19,12 @@ just_menu = (
 more_info = (
     Keyboard(one_time=False, inline=False)
         .add(Text("Наш адрес"), color=KeyboardButtonColor.PRIMARY)
-        .add(Text("Наше меню"), color=KeyboardButtonColor.PRIMARY)
+        .add((Callback("Наше меню", {"cmd": "cafe_menu"})), color=KeyboardButtonColor.PRIMARY)
         .row()
-        .add(Text("Отзывы"), color=KeyboardButtonColor.PRIMARY)
-        .add(Text("Скидки"), color=KeyboardButtonColor.PRIMARY)
+        .add((Callback("Отзывы", {"cmd": "reviews"})), color=KeyboardButtonColor.PRIMARY)
+        .add((Callback("Скидки", {"cmd": "sales"})), color=KeyboardButtonColor.PRIMARY)
         .row()
-        .add(Text("👈🏻 Назад"), color=KeyboardButtonColor.PRIMARY)
+        .add(Text("👈🏻 Назад"), color=KeyboardButtonColor.NEGATIVE)
 ).get_json()
 
 back_to_start = (
@@ -61,4 +61,21 @@ delivery_keyboard = (
     Keyboard(inline=True)
         .add(Text('Доставка'), color=KeyboardButtonColor.POSITIVE)
         .add(Text('Самовывоз'), color=KeyboardButtonColor.POSITIVE)
+).get_json()
+
+admin_keyboard = (
+    Keyboard(one_time=False, inline=False)
+        .add(Text("Заказы"), color=KeyboardButtonColor.POSITIVE)
+        .row()
+        .add(Text("Принять"), color=KeyboardButtonColor.PRIMARY)
+        .add(Text("Информация"), color=KeyboardButtonColor.SECONDARY)
+        .add(Text("Отклонить"), color=KeyboardButtonColor.NEGATIVE)
+        .row()
+        .add(Text("Разбанить"), color=KeyboardButtonColor.PRIMARY)
+        .add(Text("Клиент"), color=KeyboardButtonColor.SECONDARY)
+        .add(Text("Забанить"), color=KeyboardButtonColor.NEGATIVE)
+        .row()
+        .add(Text("Памятка"), color=KeyboardButtonColor.PRIMARY)
+        .add(Text("Завершить работу"), color=KeyboardButtonColor.NEGATIVE)
+
 ).get_json()

@@ -1,6 +1,7 @@
 from vkbottle.bot import Blueprint, Message
 from bot import mysql_connect, group_id
 from vkbottle import PhotoMessageUploader
+from data.keyboards import admin_keyboard, full_screen_menu
 
 bot = Blueprint("Admin")
 online_admins = []
@@ -27,7 +28,7 @@ async def hi_admin(message: Message):
             await message.answer('Вы уже начали рабочий день.')
         else:
             online_admins.append(users_info[0].id)
-            await message.answer('Вы приступили к работе.')
+            await message.answer('Вы приступили к работе.', keyboard=admin_keyboard)
 
 
 @bot.on.message(text="Завершить работу")
@@ -37,7 +38,7 @@ async def bye_admin(message: Message):
     if users_info[0].id in admin_list:
         if users_info[0].id in online_admins:
             online_admins.remove(users_info[0].id)
-            await message.answer('Вы завершили рабочий день.')
+            await message.answer('Вы завершили рабочий день.', keyboard=full_screen_menu)
         else:
             await message.answer('Вы не приступали к работе.')
 
@@ -143,7 +144,7 @@ async def completed_order(message: Message, args=None):
             else:
                 return "Вы ввели не число."
         else:
-            await message.answer('Для принятия заказа напишите: Отклонить НОМЕР')
+            await message.answer('Для отклонения заказа напишите: Отклонить НОМЕР')
 
 
 @bot.on.message(text=['Инфо', 'Информация', 'Инфо <args>', 'Инфомация <args>'])
@@ -177,7 +178,7 @@ async def completed_order(message: Message, args=None):
             else:
                 return "Вы ввели не число!"
         else:
-            return "Вы забыли указать номер заказа."
+            return "Вы забыли указать номер заказа. (Информация помощь)"
 
 
 @bot.on.message(text=['Анкета', 'Клиент', 'Анкета <args>', 'Клиент <args>'])
@@ -220,3 +221,57 @@ async def completed_order(message: Message, args=None):
                                      f' и скопируйте ID, как это показано на фотографии.', attachment=photo)
         else:
             await message.answer("Вы не указали ID пользователя.\nМожете прописать: Анкета помощь")
+
+
+@bot.on.message(text=['Забанить', 'Бан', 'Забанить <args>', 'Бан <args>'])
+async def completed_order(message: Message, args=None):
+    admin_list = get_admins()
+    users_info = await bot.api.users.get(message.from_id)
+    if users_info[0].id in admin_list:
+        if args is not None:
+            connection = mysql_connect()
+            if str(args).isdigit():
+                with connection.cursor() as cursor:
+                    cursor.execute(f"SELECT banned FROM users WHERE id = {int(args)}")
+                    user_db = cursor.fetchone()
+                    ban = user_db[0]
+                    if ban == 0:
+                        cursor.execute(f"UPDATE `users` SET banned = '{1}' WHERE id = {int(args)}")
+                        await message.answer(f"Пользователь [vk.com/id{args}] был заблокирован в боте.")
+                    else:
+                        await message.answer(f"Пользователь [vk.com/id{args}] уже заблокирован в боте.")
+                    connection.commit()
+            else:
+                photo_upd = PhotoMessageUploader(bot.api)
+                photo = await photo_upd.upload("drawable/help_search_id.png")
+                await message.answer(f'Пожалуйста, введите ID пользователя.\nЗайдите в переписку группы с пользователем'
+                                     f' и скопируйте ID, как это показано на фотографии.', attachment=photo)
+        else:
+            await message.answer("Вы не указали ID пользователя.\nКоманда помощи: Бан помощь")
+
+
+@bot.on.message(text=['Разбанить', 'Разбан', 'Разбанить <args>', 'Разбан <args>'])
+async def completed_order(message: Message, args=None):
+    admin_list = get_admins()
+    users_info = await bot.api.users.get(message.from_id)
+    if users_info[0].id in admin_list:
+        if args is not None:
+            connection = mysql_connect()
+            if str(args).isdigit():
+                with connection.cursor() as cursor:
+                    cursor.execute(f"SELECT banned FROM users WHERE id = {int(args)}")
+                    user_db = cursor.fetchone()
+                    ban = user_db[0]
+                    if ban == 1:
+                        cursor.execute(f"UPDATE `users` SET banned = '{0}' WHERE id = {int(args)}")
+                        await message.answer(f"Пользователь [vk.com/id{args}] был разблокирован в боте.")
+                    else:
+                        await message.answer(f"Пользователь [vk.com/id{args}] не заблокирован в боте.")
+                    connection.commit()
+            else:
+                photo_upd = PhotoMessageUploader(bot.api)
+                photo = await photo_upd.upload("drawable/help_search_id.png")
+                await message.answer(f'Пожалуйста, введите ID пользователя.\nЗайдите в переписку группы с пользователем'
+                                     f' и скопируйте ID, как это показано на фотографии.', attachment=photo)
+        else:
+            await message.answer("Вы не указали ID пользователя.\nКоманда помощи: Разбан помощь")

@@ -13,6 +13,18 @@ bot = Blueprint("Only users chat command")
 ctx = CtxStorage()
 
 
+def get_banned(user_id: int):
+    connection = mysql_connect()
+    with connection.cursor() as cursor:
+        cursor.execute(f"SELECT banned FROM users WHERE id = {user_id}")
+        banned = cursor.fetchone()
+        connection.commit()
+    if banned[0] == 0:
+        return False
+    else:
+        return True
+
+
 @bot.on.private_message(text=['Начать', 'Ку', 'Привет' '/start'])
 async def hello(message: Message):
     users_info = await bot.api.users.get(message.from_id)
@@ -101,15 +113,18 @@ async def search_orders(message: Message):
 @bot.on.private_message(text=['Связаться', 'Вопрос', 'Помощь'])
 async def answer(message: Message):
     user = await bot.api.users.get(message.from_id)
-    if not online_admins:
-        await message.answer('Ни одного менеджера нет в сети, возможно сегодня не рабочий день.')
+    if not get_banned(user[0].id):
+        if not online_admins:
+            await message.answer('Ни одного менеджера нет в сети, возможно сегодня не рабочий день.')
+        else:
+            await message.answer("Хорошо, сейчас я вызову менеджера, пока можете сформулировать свой вопрос.")
+            await bot.api.messages.send(peer_ids=online_admins,
+                                        message=f'Пользователь [vk.com/id{user[0].id}|'
+                                                f'{user[0].first_name} {user[0].last_name}]'
+                                                f' хочет связаться с менеджером!\nОтветить: '
+                                                f'vk.com/gim{group_id}?sel={user[0].id}', random_id=0)
     else:
-        await message.answer("Хорошо, сейчас я вызову менеджера, пока можете сформулировать свой вопрос.")
-        await bot.api.messages.send(peer_ids=online_admins,
-                                    message=f'Пользователь [vk.com/id{user[0].id}|'
-                                            f'{user[0].first_name} {user[0].last_name}]'
-                                            f' хочет связаться с менеджером!\nОтветить: '
-                                            f'vk.com/gim{group_id}?sel={user[0].id}', random_id=0)
+        await message.answer("Вы заблокированы и не можете воспользоваться данной командой.")
 
 
 @bot.on.private_message(text='Указать номер телефона')
@@ -202,17 +217,20 @@ async def address_end(message: Message):
 
 @bot.on.message(text='Сделать заказ')
 async def make_order(message: Message):
-    connection = mysql_connect()
     users_info = await bot.api.users.get(message.from_id)
-    with connection.cursor() as cursor:
-        cursor.execute(f"SELECT phone FROM users WHERE id = {users_info[0].id}")
-        phone = str(cursor.fetchone()[0])
-        if phone == 'empty':
-            await message.answer("Для заказа необходимо указать номер телефона.", keyboard=input_phone)
-            await bot.state_dispenser.set(message.peer_id, Order.END)
-        else:
-            await bot.state_dispenser.set(message.peer_id, Order.DELIVERY)
-            await message.answer("Как Вы собираетесь забирать свой заказ?", keyboard=delivery_keyboard)
+    if not get_banned(users_info[0].id):
+        connection = mysql_connect()
+        with connection.cursor() as cursor:
+            cursor.execute(f"SELECT phone FROM users WHERE id = {users_info[0].id}")
+            phone = str(cursor.fetchone()[0])
+            if phone == 'empty':
+                await message.answer("Для заказа необходимо указать номер телефона.", keyboard=input_phone)
+                await bot.state_dispenser.set(message.peer_id, Order.END)
+            else:
+                await bot.state_dispenser.set(message.peer_id, Order.DELIVERY)
+                await message.answer("Как Вы собираетесь забирать свой заказ?", keyboard=delivery_keyboard)
+    else:
+        await message.answer("Вы заблокированы и не можете воспользоваться данной командой.")
 
 
 @bot.on.private_message(state=Order.DELIVERY)
@@ -270,7 +288,8 @@ async def order_info_del(message: Message):
     else:
         await bot.api.messages.send(peer_ids=online_admins, message=order_str, random_id=0)
     await message.answer(f"Ваш заказ был оформлен под №:{last_num}\nДата: {now_date}\nАдрес доставки: {address}\n"
-                         f"Тел: {phone}\n{'#' * 20}\n{message.text}\n{'#' * 20}")
+                         f"Тел: {phone}\n{'#' * 20}\n{message.text}\n{'#' * 20}\n\n"
+                         f"В скором времени с Вами свяжется наш менеджер для уточнения информации.")
 
 
 @bot.on.private_message(state=Order.INFO_SAM)
@@ -306,4 +325,5 @@ async def order_info_sam(message: Message):
     else:
         await bot.api.messages.send(peer_ids=online_admins, message=order_str, random_id=0)
     await message.answer(f"Ваш заказ был оформлен под №:{last_num}\nДата: {now_date}\nТип доставки: Самовывоз\n"
-                         f"Тел: {phone}\n{'#' * 20}\n{message.text}\n{'#' * 20}")
+                         f"Тел: {phone}\n{'#' * 20}\n{message.text}\n{'#' * 20}\n\n"
+                         f"В скором времени с Вами свяжется наш менеджер для уточнения информации.")
