@@ -25,6 +25,14 @@ def get_banned(user_id: int):
         return True
 
 
+def check_str(text: str):
+    temp = '0123456789.+/=*'
+    for value in text:
+        if value in temp:
+            return False
+    return True
+
+
 @bot.on.private_message(text=['Начать', 'Ку', 'Привет' '/start'])
 async def hello(message: Message):
     users_info = await bot.api.users.get(message.from_id)
@@ -166,16 +174,22 @@ async def city(message: Message):
 
 @bot.on.private_message(state=AddressState.CITY)
 async def street(message: Message):
-    ctx.set('city', message.text)
-    await bot.state_dispenser.set(message.peer_id, AddressState.STREET)
-    return "Отлично, а теперь улицу."
+    if check_str(message.text):
+        ctx.set('city', message.text)
+        await bot.state_dispenser.set(message.peer_id, AddressState.STREET)
+        return "Отлично, а теперь улицу."
+    else:
+        return "Вы ввели недопустимые символы, попробуйте еще раз."
 
 
 @bot.on.private_message(state=AddressState.STREET)
 async def home(message: Message):
-    ctx.set('street', message.text)
-    await bot.state_dispenser.set(message.peer_id, AddressState.HOME)
-    return "Введите номер дома (включая корпус или строение)."
+    if check_str(message.text):
+        ctx.set('street', message.text)
+        await bot.state_dispenser.set(message.peer_id, AddressState.HOME)
+        return "Введите номер дома (включая корпус или строение)."
+    else:
+        return "Вы ввели недопустимые символы, попробуйте еще раз."
 
 
 @bot.on.private_message(state=AddressState.HOME)
@@ -201,18 +215,21 @@ async def floor(message: Message):
 
 @bot.on.private_message(state=AddressState.FLOOR)
 async def address_end(message: Message):
-    users_info = await bot.api.users.get(message.from_id)
-    ctx.set('floor', message.text)
-    address: Address = Address(ctx.get('city'), ctx.get('street'), ctx.get('home'), ctx.get('flat'),
-                               ctx.get('doorphone'), ctx.get('floor'))
-    await message.answer(f'Ваш адрес: ' + address.to_string())
-    connection = mysql_connect()
-    with connection.cursor() as cursor:
-        update_query = f"UPDATE `users` SET address = '{address.to_string()}' WHERE id = '{users_info[0].id}'"
-        cursor.execute(update_query)
-        connection.commit()
-    await bot.state_dispenser.set(message.peer_id, AddressState.END)
-    return "Данные сохранены, если Вы допустили ошибку, перезапишите свой адрес еще раз."
+    if message.text.isdigit():
+        users_info = await bot.api.users.get(message.from_id)
+        ctx.set('floor', message.text)
+        address: Address = Address(ctx.get('city'), ctx.get('street'), ctx.get('home'), ctx.get('flat'),
+                                   ctx.get('doorphone'), ctx.get('floor'))
+        await message.answer(f'Ваш адрес: ' + address.to_string())
+        connection = mysql_connect()
+        with connection.cursor() as cursor:
+            update_query = f"UPDATE `users` SET address = '{address.to_string()}' WHERE id = '{users_info[0].id}'"
+            cursor.execute(update_query)
+            connection.commit()
+        await bot.state_dispenser.set(message.peer_id, AddressState.END)
+        return "Данные сохранены, если Вы допустили ошибку, перезапишите свой адрес еще раз."
+    else:
+        return "Вы ввели недопустимые символы, попробуйте еще раз."
 
 
 @bot.on.message(text='Сделать заказ')
