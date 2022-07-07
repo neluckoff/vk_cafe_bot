@@ -24,7 +24,7 @@ if __name__ == "__main__":
 
     try:
         connection = mysql_connect()
-        print("Database has been connected")
+        print("[+] Database has been connected")
 
         cursor = connection.cursor()
 

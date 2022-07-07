@@ -1,13 +1,14 @@
 from vkbottle.bot import Blueprint, Message
 from vkbottle import CtxStorage
 from data.keyboards import full_screen_menu, just_menu, more_info, back_to_start, person_keyboard, \
-    input_phone, input_address, input_all, delivery_keyboard
+    input_phone, input_address, input_all, delivery_keyboard, full_screen_menu_adm
 from data.config import group_id, hight_admin
 from misc.state_group import AddressState, Phone, Order
 from misc.address import Address
 from bot import mysql_connect
 from commands.admins.admin_commands import online_admins
 import datetime
+from commands.admins.admin_commands import get_admins
 
 bot = Blueprint("Only users chat command")
 ctx = CtxStorage()
@@ -66,7 +67,10 @@ async def hi_handler(message: Message):
     if cursor.fetchone() is None:
         await message.answer("Вы еще не зарегистрированы! Пожалуйста, пропишите \"Начать\".", keyboard=back_to_start)
     else:
-        await message.answer("Вы вызвали меню.", keyboard=full_screen_menu)
+        if users_info[0].id in get_admins():
+            await message.answer("Вы вызвали меню.", keyboard=full_screen_menu_adm)
+        else:
+            await message.answer("Вы вызвали меню.", keyboard=full_screen_menu)
 
 
 @bot.on.message(text='О нас')
@@ -130,7 +134,7 @@ async def answer(message: Message):
                                         message=f'Пользователь [vk.com/id{user[0].id}|'
                                                 f'{user[0].first_name} {user[0].last_name}]'
                                                 f' хочет связаться с менеджером!\nОтветить: '
-                                                f'vk.com/gim{group_id}?sel={user[0].id}', random_id=0)
+                                                f'vk.com/gim{group_id}?sel={user[0].id}', keyboard=full_screen_menu_adm, random_id=0)
     else:
         await message.answer("Вы заблокированы и не можете воспользоваться данной командой.")
 

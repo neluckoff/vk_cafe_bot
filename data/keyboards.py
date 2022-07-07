@@ -10,6 +10,17 @@ full_screen_menu = (
         .add(Text('Личный кабинет'), color=KeyboardButtonColor.SECONDARY)
 ).get_json()
 
+full_screen_menu_adm = (
+    Keyboard(one_time=False, inline=False)
+        .add(Text('Сделать заказ'), color=KeyboardButtonColor.POSITIVE)
+        .row()
+        .add(Text('О нас'), color=KeyboardButtonColor.PRIMARY)
+        .add(Text('Связаться'), color=KeyboardButtonColor.PRIMARY)
+        .row()
+        .add(Text('Личный кабинет'), color=KeyboardButtonColor.SECONDARY)
+        .add(Text('Начать работу'), color=KeyboardButtonColor.POSITIVE)
+).get_json()
+
 just_menu = (
     Keyboard(one_time=False, inline=False)
         .add(Text('Меню'), color=KeyboardButtonColor.PRIMARY)
