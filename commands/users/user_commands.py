@@ -9,7 +9,7 @@ from bot import mysql_connect
 from commands.admins.admin_commands import online_admins
 import datetime
 from commands.admins.admin_commands import get_admins
-from data.big_strings import ban_words
+from misc.big_strings import ban_words, all_commands
 
 bot = Blueprint("users chat command")
 ctx = CtxStorage()
@@ -20,6 +20,13 @@ def check_ban_word(string):
         if word in string:
             return True
     return False
+
+
+def check_all_commands(string):
+    for word in all_commands:
+        if string == word:
+            return False
+    return True
 
 
 def get_banned(user_id: int):
@@ -258,7 +265,7 @@ async def ask(message: Message):
     text_db = text.replace('\n', '; ')
     if text == "Отмена":
         await message.answer("Обращение отменено.")
-    else:
+    elif check_all_commands(text):
         if not text.isdigit():
             if check_ban_word(text):
                 await message.answer("Не ругайтесь, сформулируйте проблему корректно.")
@@ -286,6 +293,9 @@ async def ask(message: Message):
                 await bot.state_dispenser.set(message.peer_id, Question.END)
         else:
             await message.answer("Обращение не может состоять только из цифр!")
+    else:
+        await message.answer("Ваше обращение похоже на текст команды, мы отменим его.")
+        await bot.state_dispenser.set(message.peer_id, Question.END)
 
 
 @bot.on.message(text='Сделать заказ')
@@ -335,46 +345,49 @@ async def delivery_info(message: Message):
 async def order_info_del(message: Message):
     if not message.text.isdigit():
         if not check_ban_word(message.text):
-            order = message.text.replace(' \n', '|')
-            now_date = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
-            users_info = await bot.api.users.get(message.from_id)
-            connection = mysql_connect()
-            with connection.cursor() as cursor:
-                cursor.execute(f"SELECT address FROM users WHERE id = {users_info[0].id}")
-                address = str(cursor.fetchone()[0])
-                cursor.execute(f"SELECT phone FROM users WHERE id = {users_info[0].id}")
-                phone = str(cursor.fetchone()[0])
-                connection.commit()
-            with connection.cursor() as cursor:
-                cursor.execute(f"SELECT order_id FROM orders")
-                ids_orders = cursor.fetchall()
-                last_num = 1
-                for row in ids_orders:
-                    last_num = row[0] + 1
-                name = users_info[0].first_name + ' ' + users_info[0].last_name
-                cursor.execute(f"INSERT INTO `orders` (order_id, user_id, name, "
-                               f", phone, date, order_list, completed) "
-                               f"VALUES ('{last_num}', '{users_info[0].id}', '{name}',"
-                               f"'{address}', '{phone}', '{now_date}', '{order}', '{0}');")
-                connection.commit()
-                await bot.state_dispenser.set(message.peer_id, Order.END)
-            order_str = f"Поступил новый заказ!\n\n№: {last_num}\n{now_date}\nОт: {name}\n{address}\n" \
-                        f"Тел: {phone}\n{'#' * 20}\n{message.text}\n{'#' * 20}\n\nПерейти к диалогу: " \
-                        f"vk.com/gim{group_id}?sel={users_info[0].id}"
-            if not online_admins:
-                await bot.api.messages.send(peer_id=hight_admin, message=order_str,
-                                            keyboard=order_keyboard(last_num), random_id=0)
-                await bot.api.messages.send(peer_id=hight_admin,
-                                            message='❗ Вам пришло это уведомление, '
-                                                    'потому что ни одного менеджера нет в сети.',
-                                            random_id=0)
+            if check_all_commands(message.text):
+                order = message.text.replace(' \n', '|')
+                now_date = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
+                users_info = await bot.api.users.get(message.from_id)
+                connection = mysql_connect()
+                with connection.cursor() as cursor:
+                    cursor.execute(f"SELECT address FROM users WHERE id = {users_info[0].id}")
+                    address = str(cursor.fetchone()[0])
+                    cursor.execute(f"SELECT phone FROM users WHERE id = {users_info[0].id}")
+                    phone = str(cursor.fetchone()[0])
+                    connection.commit()
+                with connection.cursor() as cursor:
+                    cursor.execute(f"SELECT order_id FROM orders")
+                    ids_orders = cursor.fetchall()
+                    last_num = 1
+                    for row in ids_orders:
+                        last_num = row[0] + 1
+                    name = users_info[0].first_name + ' ' + users_info[0].last_name
+                    cursor.execute(f"INSERT INTO `orders` (order_id, user_id, name, "
+                                   f", phone, date, order_list, completed) "
+                                   f"VALUES ('{last_num}', '{users_info[0].id}', '{name}',"
+                                   f"'{address}', '{phone}', '{now_date}', '{order}', '{0}');")
+                    connection.commit()
+                    await bot.state_dispenser.set(message.peer_id, Order.END)
+                order_str = f"Поступил новый заказ!\n\n№{last_num}\n{now_date}\nОт: {name}\n{address}\n" \
+                            f"Тел: {phone}\n{'#' * 20}\n{message.text}\n{'#' * 20}\n\nПерейти к диалогу: " \
+                            f"vk.com/gim{group_id}?sel={users_info[0].id}"
+                if not online_admins:
+                    await bot.api.messages.send(peer_id=hight_admin, message=order_str,
+                                                keyboard=order_keyboard(last_num), random_id=0)
+                    await bot.api.messages.send(peer_id=hight_admin,
+                                                message='❗ Вам пришло это уведомление, '
+                                                        'потому что ни одного менеджера нет в сети.',
+                                                random_id=0)
+                else:
+                    await bot.api.messages.send(peer_id=hight_admin, message=order_str,
+                                                keyboard=order_keyboard(last_num), random_id=0)
+                await message.answer(f"Ваш заказ был оформлен под №{last_num}\nДата: {now_date}\n"
+                                     f"Адрес доставки: {address}\n"
+                                     f"Тел: {phone}\n{'#' * 20}\n{message.text}\n{'#' * 20}\n\n"
+                                     f"В скором времени с Вами свяжется наш менеджер для уточнения информации.")
             else:
-                await bot.api.messages.send(peer_id=hight_admin, message=order_str,
-                                            keyboard=order_keyboard(last_num), random_id=0)
-            await message.answer(f"Ваш заказ был оформлен под №:{last_num}\nДата: {now_date}\n"
-                                 f"Адрес доставки: {address}\n"
-                                 f"Тел: {phone}\n{'#' * 20}\n{message.text}\n{'#' * 20}\n\n"
-                                 f"В скором времени с Вами свяжется наш менеджер для уточнения информации.")
+                await message.answer("Ваш заказ похож на одну из команд, попробуйте написать заказ еще раз.")
         else:
             await message.answer("Сформулируйте свой заказ адекватно!")
     else:
@@ -385,43 +398,47 @@ async def order_info_del(message: Message):
 async def order_info_sam(message: Message):
     if not message.text.isdigit():
         if not check_ban_word(message.text):
-            order = message.text.replace(' \n', '|')
-            now_date = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
-            users_info = await bot.api.users.get(message.from_id)
-            connection = mysql_connect()
-            with connection.cursor() as cursor:
-                cursor.execute(f"SELECT phone FROM users WHERE id = {users_info[0].id}")
-                phone = str(cursor.fetchone()[0])
-                connection.commit()
-            with connection.cursor() as cursor:
-                last_num = 1
-                cursor.execute(f"SELECT order_id FROM orders")
-                ids_orders = cursor.fetchall()
-                name = users_info[0].first_name + ' ' + users_info[0].last_name
-                for row in ids_orders:
-                    last_num = row[0] + 1
-                cursor.execute(
-                    f"INSERT INTO `orders` (order_id, user_id, name, address, phone, date, order_list, completed) "
-                    f"VALUES ('{last_num}', '{users_info[0].id}', '{name}',"
-                    f"'Самовывоз', '{phone}', '{now_date}', '{order}', '{0}');")
-                connection.commit()
-                await bot.state_dispenser.set(message.peer_id, Order.END)
-            order_str = f"Поступил новый заказ!\n\n№: {last_num}\n{now_date}\nОт: {name}\nСАМОВЫВОЗ\n" \
-                        f"Тел: {phone}\n{'#' * 20}\n{message.text}\n{'#' * 20}\n\nПерейти к диалогу: " \
-                        f"vk.com/gim{group_id}?sel={users_info[0].id}"
-            if not online_admins:
-                await bot.api.messages.send(peer_id=hight_admin, message=order_str,
-                                            keyboard=order_keyboard(last_num), random_id=0)
-                await bot.api.messages.send(peer_id=hight_admin,
-                                            message='❗ Вам пришло это уведомление, '
-                                                    'потому что ни одного менеджера нет в сети.',
-                                            random_id=0)
+            if check_all_commands(message.text):
+                order = message.text.replace(' \n', '|')
+                now_date = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
+                users_info = await bot.api.users.get(message.from_id)
+                connection = mysql_connect()
+                with connection.cursor() as cursor:
+                    cursor.execute(f"SELECT phone FROM users WHERE id = {users_info[0].id}")
+                    phone = str(cursor.fetchone()[0])
+                    connection.commit()
+                with connection.cursor() as cursor:
+                    last_num = 1
+                    cursor.execute(f"SELECT order_id FROM orders")
+                    ids_orders = cursor.fetchall()
+                    name = users_info[0].first_name + ' ' + users_info[0].last_name
+                    for row in ids_orders:
+                        last_num = row[0] + 1
+                    cursor.execute(
+                        f"INSERT INTO `orders` (order_id, user_id, name, address, phone, date, order_list, completed) "
+                        f"VALUES ('{last_num}', '{users_info[0].id}', '{name}',"
+                        f"'Самовывоз', '{phone}', '{now_date}', '{order}', '{0}');")
+                    connection.commit()
+                    await bot.state_dispenser.set(message.peer_id, Order.END)
+                order_str = f"Поступил новый заказ!\n\n№{last_num}\n{now_date}\nОт: {name}\nСАМОВЫВОЗ\n" \
+                            f"Тел: {phone}\n{'#' * 20}\n{message.text}\n{'#' * 20}\n\nПерейти к диалогу: " \
+                            f"vk.com/gim{group_id}?sel={users_info[0].id}"
+                if not online_admins:
+                    await bot.api.messages.send(peer_id=hight_admin, message=order_str,
+                                                keyboard=order_keyboard(last_num), random_id=0)
+                    await bot.api.messages.send(peer_id=hight_admin,
+                                                message='❗ Вам пришло это уведомление, '
+                                                        'потому что ни одного менеджера нет в сети.',
+                                                random_id=0)
+                else:
+                    await bot.api.messages.send(peer_id=hight_admin, message=order_str,
+                                                keyboard=order_keyboard(last_num), random_id=0)
+                await message.answer(f"Ваш заказ был оформлен под №{last_num}\nДата: {now_date}\n"
+                                     f"Тип доставки: Самовывоз\n"
+                                     f"Тел: {phone}\n{'#' * 20}\n{message.text}\n{'#' * 20}\n\n"
+                                     f"В скором времени с Вами свяжется наш менеджер для уточнения информации.")
             else:
-                await bot.api.messages.send(peer_id=hight_admin, message=order_str,
-                                            keyboard=order_keyboard(last_num), random_id=0)
-            await message.answer(f"Ваш заказ был оформлен под №:{last_num}\nДата: {now_date}\nТип доставки: Самовывоз\n"
-                                 f"Тел: {phone}\n{'#' * 20}\n{message.text}\n{'#' * 20}\n\n"
-                                 f"В скором времени с Вами свяжется наш менеджер для уточнения информации.")
+                await message.answer("Ваш заказ похож на одну из команд, попробуйте написать заказ еще раз.")
         else:
             await message.answer("Сформулируйте свой заказ адекватно!")
     else:

@@ -4,7 +4,7 @@ from vkbottle import PhotoMessageUploader, DocMessagesUploader
 from vkbottle.bot import Blueprint, Message
 
 from bot import mysql_connect, group_id
-from data.big_strings import admin_memo
+from misc.big_strings import admin_memo
 from data.config import hight_admin
 from data.keyboards import admin_keyboard, full_screen_menu_adm
 from misc.state_group import Spam
@@ -336,6 +336,34 @@ async def completed_order(message: Message, args=None):
             await message.answer("Вы не указали ID пользователя.")
 
 
+@bot.on.message(text=['Снять', 'Снять админа', 'Снять админа <args>', 'Снять <args>'])
+async def completed_order(message: Message, args=None):
+    users_info = await bot.api.users.get(message.from_id)
+    if users_info[0].id in hight_admin:
+        if args is not None:
+            connection = mysql_connect()
+            if str(args).isdigit():
+                if check_id_in_db(int(args)):
+                    with connection.cursor() as cursor:
+                        cursor.execute(f"SELECT status FROM users WHERE id = {int(args)}")
+                        user_db = cursor.fetchone()
+                        if user_db[0] == "user":
+                            await message.answer(f'Пользователь [vk.com/id{args}] не является администратором.')
+                        else:
+                            cursor.execute(f"UPDATE `users` SET status = 'user' WHERE id = {int(args)}")
+                            await message.answer(f'Пользователь [vk.com/id{args}] был снят с поста администратора.')
+                        connection.commit()
+                else:
+                    return "Пользователь с таким ID не зарегестрирован."
+            else:
+                photo_upd = PhotoMessageUploader(bot.api)
+                photo = await photo_upd.upload("assets/help_search_id.png")
+                await message.answer(f'Пожалуйста, введите ID пользователя.\nЗайдите в переписку группы с пользователем'
+                                     f' и скопируйте ID, как это показано на фотографии.', attachment=photo)
+        else:
+            await message.answer("Вы не указали ID пользователя.")
+
+
 @bot.on.message(text=['Памятка'])
 async def completed_order(message: Message):
     admin_list = get_admins()
@@ -438,9 +466,8 @@ async def completed_ask(message: Message, args=None):
 
 @bot.on.message(text=['Рассылка'])
 async def spam(message: Message):
-    admin_list = get_admins()
     users_info = await bot.api.users.get(message.from_id)
-    if users_info[0].id in admin_list:
+    if users_info[0].id in hight_admin:
         await bot.state_dispenser.set(message.peer_id, Spam.TEXT)
         return "Введите текст для рассылки. Для отмены просто напишите \"Отмена\""
 
@@ -457,6 +484,6 @@ async def spam_text(message: Message):
             connection.commit()
         users_list = []
         for row in users_db:
-            users_list.append(row)
+            users_list.append(row[0])
         await bot.api.messages.send(peer_ids=users_list, message=message.text, random_id=0)
 
