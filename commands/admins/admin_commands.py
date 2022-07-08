@@ -7,8 +7,9 @@ from bot import mysql_connect, group_id
 from data.big_strings import admin_memo
 from data.config import hight_admin
 from data.keyboards import admin_keyboard, full_screen_menu_adm
+from misc.state_group import Spam
 
-bot = Blueprint("Admin")
+bot = Blueprint("admins chat commands")
 online_admins = []
 
 
@@ -219,14 +220,8 @@ async def completed_order(message: Message, args=None):
                     else:
                         name = user_db[1]
                         id_db = user_db[0]
-                        if user_db[2] == 'empty':
-                            phone = 'отсутствует'
-                        else:
-                            phone = user_db[2]
-                        if user_db[3] == 'empty':
-                            address = 'отсутствует'
-                        else:
-                            address = user_db[3]
+                        phone = user_db[2]
+                        address = user_db[3]
                         num_orders = user_db[4]
                         if int(user_db[6]) == 0:
                             banned = 'нет'
@@ -381,7 +376,7 @@ async def completed_order(message: Message):
     doc = await doc_upd.upload("Таблица заказов.xlsx", "assets/order_table.xlsx", peer_id=message.peer_id)
     await message.answer(f'Таблица сгенерирована.', attachment=doc)
     os.remove("./assets/order_table.xlsx")
-    print('The order table has been created')
+    print('[+] The order table has been created')
 
 
 @bot.on.message(text=['Скачать таблицу пользователей'])
@@ -403,14 +398,8 @@ async def completed_order(message: Message):
             for row in all_users:
                 user_id.append(row[0])
                 name.append(row[1])
-                if row[2] == 'empty':
-                    phone.append('Отсутствует')
-                else:
-                    phone.append(row[2])
-                if row[3] == 'empty':
-                    address.append('Отсутствует')
-                else:
-                    address.append(row[3])
+                phone.append(row[2])
+                address.append(row[3])
                 num_orders.append(row[4])
                 status.append(row[5])
                 if row[6] == 0:
@@ -426,3 +415,48 @@ async def completed_order(message: Message):
     await message.answer(f'Таблица сгенерирована.', attachment=doc)
     os.remove("./assets/user_table.xlsx")
     print('[+] The user table has been created')
+
+
+@bot.on.message(text=['Обработать', 'Обработать <args>'])
+async def completed_ask(message: Message, args=None):
+    admin_list = get_admins()
+    users_info = await bot.api.users.get(message.from_id)
+    if users_info[0].id in admin_list:
+        if args is not None:
+            connection = mysql_connect()
+            if str(args).isdigit():
+                with connection.cursor() as cursor:
+                    update_query = f"UPDATE questions SET completed = '{1}' WHERE ques_id = '{int(args)}'"
+                    cursor.execute(update_query)
+                    connection.commit()
+                await message.answer(f'Вы обработали обращение №{args}')
+            else:
+                await message.answer(f'Номер обращения может быть только числом!')
+        else:
+            await message.answer(f'Введите номер обращения: Обработать НОМЕР')
+
+
+@bot.on.message(text=['Рассылка'])
+async def spam(message: Message):
+    admin_list = get_admins()
+    users_info = await bot.api.users.get(message.from_id)
+    if users_info[0].id in admin_list:
+        await bot.state_dispenser.set(message.peer_id, Spam.TEXT)
+        return "Введите текст для рассылки. Для отмены просто напишите \"Отмена\""
+
+
+@bot.on.private_message(state=Spam.TEXT)
+async def spam_text(message: Message):
+    if message.text == "Отмена":
+        await message.answer("Вы отменили рассылку.")
+    else:
+        connection = mysql_connect()
+        with connection.cursor() as cursor:
+            cursor.execute(f'SELECT id FROM users')
+            users_db = cursor.fetchall()
+            connection.commit()
+        users_list = []
+        for row in users_db:
+            users_list.append(row)
+        await bot.api.messages.send(peer_ids=users_list, message=message.text, random_id=0)
+

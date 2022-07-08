@@ -21,3 +21,13 @@ class Order(BaseStateGroup):
     INFO_DEL = 2
     INFO_SAM = 3
     END = 4
+
+
+class Question(BaseStateGroup):
+    ASK = 1
+    END = 2
+
+
+class Spam(BaseStateGroup):
+    TEXT = 1
+    END = 2

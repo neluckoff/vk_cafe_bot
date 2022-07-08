@@ -24,7 +24,6 @@ if __name__ == "__main__":
 
     try:
         connection = mysql_connect()
-        print("[+] Database has been connected")
 
         cursor = connection.cursor()
 
@@ -53,6 +52,16 @@ if __name__ == "__main__":
                        )""")
         connection.commit()
 
+        cursor.execute("""CREATE TABLE IF NOT EXISTS questions(
+                                    ques_id int AUTO_INCREMENT,
+                                    user_id int,
+                                    text varchar(1000),
+                                    completed BOOLEAN, 
+                                    PRIMARY KEY(ques_id)
+                                       )""")
+        connection.commit()
+
+        print("[+] Database has been connected")
     except Exception as ex:
         print(ex)
 
