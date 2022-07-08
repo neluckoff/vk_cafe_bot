@@ -57,6 +57,7 @@ if __name__ == "__main__":
                                     user_id int,
                                     text varchar(1000),
                                     completed BOOLEAN, 
+                                    date varchar(32),
                                     PRIMARY KEY(ques_id)
                                        )""")
         connection.commit()

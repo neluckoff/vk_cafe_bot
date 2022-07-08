@@ -77,6 +77,7 @@ delivery_keyboard = (
 admin_keyboard = (
     Keyboard(one_time=False, inline=False)
     .add(Text("Заказы"), color=KeyboardButtonColor.POSITIVE)
+    .add(Text("Обращения"), color=KeyboardButtonColor.POSITIVE)
     .row()
     .add(Text("Принять"), color=KeyboardButtonColor.PRIMARY)
     .add(Text("Информация"), color=KeyboardButtonColor.SECONDARY)
@@ -86,8 +87,12 @@ admin_keyboard = (
     .add(Text("Клиент"), color=KeyboardButtonColor.SECONDARY)
     .add(Text("Забанить"), color=KeyboardButtonColor.NEGATIVE)
     .row()
+    .add(Text("Обработать"), color=KeyboardButtonColor.PRIMARY)
+    .add(Text("Обращение"), color=KeyboardButtonColor.PRIMARY)
+    .row()
     .add(Text("Памятка"), color=KeyboardButtonColor.PRIMARY)
     .add(Text("Завершить работу"), color=KeyboardButtonColor.NEGATIVE)
+    .add(Text("Меню"), color=KeyboardButtonColor.PRIMARY)
 
 ).get_json()
 

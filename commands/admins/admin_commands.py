@@ -454,10 +454,15 @@ async def completed_ask(message: Message, args=None):
             connection = mysql_connect()
             if str(args).isdigit():
                 with connection.cursor() as cursor:
-                    update_query = f"UPDATE questions SET completed = '{1}' WHERE ques_id = '{int(args)}'"
-                    cursor.execute(update_query)
-                    connection.commit()
-                await message.answer(f'Вы обработали обращение №{args}')
+                    cursor.execute(f"SELECT * FROM questions WHERE ques_id = {int(args)} AND completed = '{0}'")
+                    ques = cursor.fetchone()
+                    if ques is not None:
+                        update_query = f"UPDATE questions SET completed = '{1}' WHERE ques_id = '{int(args)}'"
+                        cursor.execute(update_query)
+                        connection.commit()
+                        await message.answer(f'Вы обработали обращение №{args}')
+                    else:
+                        await message.answer(f'Обращения под №{args} не существует или оно уже обработано.')
             else:
                 await message.answer(f'Номер обращения может быть только числом!')
         else:
@@ -486,4 +491,62 @@ async def spam_text(message: Message):
         for row in users_db:
             users_list.append(row[0])
         await bot.api.messages.send(peer_ids=users_list, message=message.text, random_id=0)
+
+
+@bot.on.message(text="Обращения")
+async def ask_for_admin(message: Message):
+    admin_list = get_admins()
+    users_info = await bot.api.users.get(message.from_id)
+    if users_info[0].id in admin_list:
+        connection = mysql_connect()
+        with connection.cursor() as cursor:
+            cursor.execute(f"SELECT ques_id FROM questions WHERE completed = {0}")
+            ids_ques = cursor.fetchall()
+            ques = []
+            for row in ids_ques:
+                ques.append(row[0])
+            connection.commit()
+        if not ques:
+            await message.answer('Список необработанных обращений пуст.')
+        else:
+            str = "Необработанные обращения:\n"
+            abc = len(ques)
+            for row in ques:
+                if row == ques[abc - 1]:
+                    str += f"Обращение №{row}"
+                else:
+                    str += f"Обращение №{row}\n"
+            await message.answer(str)
+            return "Не забудьте обработать обращение: Обработать НОМЕР"
+
+
+@bot.on.message(text=["Обращение <args>", "Обращение"])
+async def ask_for_admin(message: Message, args=None):
+    admin_list = get_admins()
+    users_info = await bot.api.users.get(message.from_id)
+    if users_info[0].id in admin_list:
+        if args is not None:
+            if args.isdigit():
+                connection = mysql_connect()
+                with connection.cursor() as cursor:
+                    cursor.execute(f"SELECT * FROM questions WHERE ques_id = {int(args)}")
+                    ques = cursor.fetchone()
+                    connection.commit()
+                if ques is not None:
+                    text = ques[2].replace(";", "\n")
+                    if ques[3] == 0:
+                        st = "Нет"
+                    else:
+                        st = "Да"
+                    str = f"Информация об обращении №{ques[0]}\n" \
+                          f"От: vk.com/id{ques[1]}\nДата: {ques[4]}\n" \
+                          f"Текст обращения:\n{text}\nОбработано: {st}"
+                    await message.answer(str)
+                else:
+                    await message.answer("Обращения с таким ID не существует.")
+            else:
+                await message.answer("ID обращения является числом!")
+        else:
+            await message.answer("Введите номер обращения: Обращение НОМЕР")
+
 

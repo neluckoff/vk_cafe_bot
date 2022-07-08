@@ -90,7 +90,8 @@ async def hi_handler(message: Message):
 
 @bot.on.message(text='О нас')
 async def hi_handler(message: Message):
-    await message.answer("Мы - лучшее кафе на рынке РФ.", keyboard=more_info)
+    await message.answer("Доставка осетинских пирогов в Лобне и Долгопрудном от "
+                         "жизнерадостного проекта \"Пироги Алания\"", keyboard=more_info)
 
 
 @bot.on.message(text='Личный кабинет')
@@ -277,9 +278,10 @@ async def ask(message: Message):
                     ids_ques = cursor.fetchall()
                     for row in ids_ques:
                         last_num = row[0] + 1
+                    now_date = str(datetime.datetime.now().strftime("%d-%m-%Y %H:%M"))
 
-                    cursor.execute(f"INSERT INTO `questions` (ques_id, user_id, text, completed) "
-                                   f"VALUES ('{last_num}', '{user[0].id}', '{text_db}', 0);")
+                    cursor.execute(f"INSERT INTO `questions` (ques_id, user_id, text, completed, date) "
+                                   f"VALUES ('{last_num}', '{user[0].id}', '{text_db}', 0, '{now_date}');")
                     connection.commit()
 
                 await message.answer("В скором времени менеджер ответит на ваше обращение.")
@@ -443,3 +445,8 @@ async def order_info_sam(message: Message):
             await message.answer("Сформулируйте свой заказ адекватно!")
     else:
         await message.answer("Заказ не может состоять только из цифр!")
+
+
+@bot.on.message(text='Наш адрес')
+async def user_get_address(message: Message):
+    await message.answer("Наши адреса:\n\n📍 г. Лобня ул. Кольцевая 1Б\n📍 г. Долгопрудный Проспект Пацаева 7к11")
